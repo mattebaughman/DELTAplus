@@ -6,6 +6,7 @@ import pandas as pd
 from globus_compute_sdk import Client, Executor
 from globus_compute_sdk.serialize import CombinedCode, DillDataBase64
 
+
 from .global_table import GlobalTable
 from .scheduler import Scheduler
 from .task_handler import TaskHandler
