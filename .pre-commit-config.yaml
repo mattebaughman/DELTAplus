@@ -17,13 +17,10 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
-  - repo: 'https://github.com/charliermarsh/ruff-pre-commit'
-    rev: v0.6.9
+  - repo: 'https://github.com/psf/black-pre-commit-mirror'
+    rev: 23.11.0
     hooks:
-      - id: ruff
-        args:
-          - '--fix'
-      - id: ruff-format
+      - id: black
   - repo: 'https://github.com/pre-commit/mirrors-mypy'
     rev: v1.11.2
     hooks:
