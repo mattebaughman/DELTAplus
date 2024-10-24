@@ -15,7 +15,7 @@ from .tasks import get_count
 
 
 class Delta:
-    def __init__(self, endpoints, interactive=False):
+    def __init__(self, endpoints, strategy="delta", interactive=False):
         self.endpoints = endpoints
         self.endpoint_uuids = list(self.endpoints.values())
         self.global_table = GlobalTable(
@@ -57,7 +57,7 @@ class Delta:
                 user_endpoint_config={
                     "worker_init": "conda activate delta",
                     "endpoint_setup": "",
-                    "max_workers": 1,  # Default value; will be updated later
+                    "max_workers": 12,  # Default value; will be updated later
                 },
             )
         return executors
@@ -247,8 +247,38 @@ class Delta:
                     results[task_id] = None
                 else:
                     results[task_id] = result["result"]
-            await asyncio.sleep(0.1)  # Short sleep to prevent tight loop
+            await asyncio.sleep(0.1)  # Prevent tight loop
         return results
+
+    def _update_executor(self, ep_name, cpu_count):
+        self.executors[ep_name].user_endpoint_config["max_workers"] = cpu_count
+
+    def _update_global_table(self, ep_name, cpu_count):
+        ep_uuid = self._get_uuid_by_name(ep_name)
+        if "get_count" not in self.global_table.observations.index:
+            self.global_table.observations = self.global_table.observations._append(
+                pd.Series(name="get_count")
+            )
+        self.global_table.observations.at["get_count", ep_uuid] = cpu_count
+        self.global_table.save_table()
+
+    def _get_endpoint_name_from_future(self, future):
+        for task_id, task_future in self.tracker.tasks.items():
+            if task_future == future:
+                return task_id.replace("get_count_", "")
+        return None
+
+    def _get_uuid_by_name(self, ep_name):
+        for name, uuid in self.endpoints.items():
+            if name == ep_name:
+                return uuid
+        return None
+
+    def _get_name_by_uuid(self, ep_uuid):
+        for name, uuid in self.endpoints.items():
+            if uuid == ep_uuid:
+                return name
+        return None
 
     async def _wake_up_endpoints(self):
         """
