@@ -2,11 +2,6 @@ import os
 
 import pandas as pd
 
-"""
-TO-DO
-convert to numpy format
-"""
-
 
 class GlobalTable:
     def __init__(
@@ -61,7 +56,10 @@ class GlobalTable:
             ).split(",")
             new_eps = [ep.strip() for ep in new_eps if ep.strip()]
             for ep in new_eps:
-                table[ep] = 1 if data_type == "predictions" else {}
+                if data_type == "predictions":
+                    table[ep] = 1.0  # Use float for predictions
+                else:
+                    table[ep] = 0.0  # Use float for observations
             table.to_csv(
                 self.predictions_path
                 if data_type == "predictions"
@@ -82,20 +80,31 @@ class GlobalTable:
             new_eps = self.endpoints
         if not new_eps:
             raise ValueError("No endpoints provided and interactive mode is False.")
+
         if data_type == "predictions":
+            # Create a DataFrame with proper numeric dtype
             table = pd.DataFrame(
-                1.0, index=[], columns=new_eps
-            )  # Initialize predictions uniformly
+                1.0,  # Initial value
+                index=["example_task"],  # Initial function name
+                columns=new_eps,  # Endpoint UUIDs as columns
+                dtype=float,  # Explicitly set dtype to float
+            )
         else:
+            # For observations, create DataFrame with float dtype
             table = pd.DataFrame(
-                {}, index=[], columns=new_eps
-            )  # Initialize empty observations
+                0.0,  # Initial value of 0 for counts
+                index=["get_count"],  # Initial metric
+                columns=new_eps,  # Endpoint UUIDs as columns
+                dtype=float,  # Explicitly set dtype to float
+            )
+
         os.makedirs(self.config_path, exist_ok=True)
         table.to_csv(
             self.predictions_path
             if data_type == "predictions"
             else self.observations_path
         )
+
         if data_type == "predictions":
             self.predictions = table
         else:

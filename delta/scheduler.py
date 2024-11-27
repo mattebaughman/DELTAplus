@@ -35,15 +35,24 @@ class Scheduler:
         for task in tasks:
             function_name = task["function"].__name__
             if function_name in self.global_table.predictions.index:
-                probabilities = self.global_table.predictions.loc[function_name].values
-                endpoints = self.global_table.predictions.columns
-                endpoint = np.random.choice(endpoints, p=probabilities)
+                probabilities = self.global_table.predictions.loc[function_name]
             else:
-                probabilities = self.global_table.predictions.mean(axis=0).values
-                endpoints = self.global_table.predictions.columns
-                probabilities = probabilities / probabilities.sum()
-                endpoint = np.random.choice(endpoints, p=probabilities)
+                probabilities = self.global_table.predictions.mean(axis=0)
+
+            # Convert to numpy array and get endpoints
+            endpoints = probabilities.index.tolist()
+            probabilities = probabilities.values
+
+            # Handle NaN values and normalize
+            probabilities = np.nan_to_num(probabilities, 0)
+            if probabilities.sum() == 0:
+                probabilities = np.ones_like(probabilities)
+            probabilities = probabilities / probabilities.sum()
+
+            # Choose endpoint
+            endpoint = np.random.choice(endpoints, p=probabilities)
             placement[task["id"]] = endpoint
+
         return placement
 
     def heuristic_thread_schedule(self, tasks: list):

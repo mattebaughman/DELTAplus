@@ -15,23 +15,31 @@ from .tasks import get_count
 
 
 class Delta:
-    def __init__(self, endpoints, strategy="delta", interactive=False):
-        self.endpoints = endpoints
-        self.endpoint_uuids = list(self.endpoints.values())
+    def __init__(self, endpoints, interactive=False):
+        """
+        Initialize Delta with endpoints.
+
+        Parameters:
+        - endpoints (dict): Dictionary mapping endpoint names to UUIDs
+        - interactive (bool): Whether to run in interactive mode
+        """
+        self.endpoints = endpoints  # Dictionary: name -> UUID
+        self.endpoint_uuids = list(endpoints.values())  # List of UUIDs
         self.global_table = GlobalTable(
-            interactive=interactive, endpoints=self.endpoint_uuids
+            endpoints=self.endpoint_uuids, interactive=interactive
         )
-        self.client = Client(
-            code_serialization_strategy=CombinedCode(),
-            data_serialization_strategy=DillDataBase64(),
-        )
+        self.scheduler = Scheduler(self.global_table)
+        self.client = Client()
         self.handler = TaskHandler(self.client)
         self.tracker = TaskTracker()
-        self.scheduler = Scheduler(self.global_table)
         self.executors = {}
 
-        # Run the asynchronous initialization
-        asyncio.run(self._async_init())
+    @classmethod
+    async def create(cls, endpoints, strategy="delta", interactive=False):
+        """Factory method to create and initialize a Delta instance."""
+        self = cls(endpoints, interactive)
+        await self._async_init()
+        return self
 
     async def _async_init(self):
         """Asynchronous initialization method."""
@@ -60,6 +68,7 @@ class Delta:
                     "max_workers": 12,  # Default value; will be updated later
                 },
             )
+        self.executors = executors
         return executors
 
     def _launch_get_count_tasks(self):
